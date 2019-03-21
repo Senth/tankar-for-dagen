@@ -7,6 +7,7 @@ from selenium.common.exceptions import NoSuchElementException
 import sys
 import time
 import urllib.request
+import os.path
 from datetime import date, timedelta
 
 def print_raw(text):
@@ -28,6 +29,7 @@ month_to_number = {
     'dec': '12',
 }
 
+
 chrome_options = webdriver.ChromeOptions()
 chrome_options.add_argument('--no-sandbox')
 chrome_options.add_argument('--disable-dev-shm-usage')
@@ -38,18 +40,6 @@ prefs = {"profile.default_content_setting_values.notifications": 2}
 chrome_options.add_experimental_option("prefs", prefs) 
 driver = webdriver.Chrome("/usr/lib/chromium-browser/chromedriver", chrome_options=chrome_options) 
 
-driver.get('https://sverigesradio.se/tankarfordagen')
-
-print(sys.getfilesystemencoding())
-
-def show_all_episodes(driver):
-    try:
-        while True:
-            show_more = driver.find_element_by_xpath('//button[@data-bt-type="js-show-more"]')
-            show_more.click()
-            time.sleep(2)
-    except NoSuchElementException:
-        return
 
 def today():
     return date.today().strftime('%Y-%m-%d')
@@ -83,18 +73,50 @@ def get_date_from_episode(episode):
         date += split_date[1]
         return date
 
+show_more_url='https://sverigesradio.se/tankarfordagen/sida/episode/showmoreepisodelistitems?unitid=1165&page={PAGE}&ajax=true&gaaction=click&gakey=avsnittslista_visa_fler_senaste&gatrackcontext=avsnittslista&date=' + today() + '%2000:00:00'
 
-show_all_episodes(driver)
-episodes = driver.find_elements_by_class_name('episode-list-item')
+def show_more(driver, page):
+    url = show_more_url.replace('{PAGE}', str(page))
+    driver.get(url)
+#     show_more = driver.find_element_by_xpath('//button[@data-bt-type="js-show-more"]')
+#     print(show_more.toString())
+#     driver.execute_script('arguments[0].scrollIntoView(true)', show_more)
+#     show_more.click()
+    time.sleep(1)
 
-for episode in episodes:
-    title = episode.find_element_by_class_name('heading').text
+def show_all_episodes(driver):
+    try:
+        while True:
+            show_more(driver)
+    except NoSuchElementException:
+        return
 
-    episode_date = get_date_from_episode(episode)
+def download_episode(episode):
+        title = episode.find_element_by_class_name('heading').text
+        episode_date = get_date_from_episode(episode)
+        file_name = episode_date + ' ' + title + '.mp3'
 
-    download_link = episode.find_element_by_xpath('.//a[contains(@href,"mp3")]').get_attribute('href')
+        # Only download new files
+        if not os.path.exists(file_name):
+            print('Downloading: ' + file_name)
+            download_link = episode.find_element_by_xpath('.//a[contains(@href,"mp3")]').get_attribute('href')
+            urllib.request.urlretrieve(download_link, file_name)
+        else:
+            print('Skipping: ' + file_name)
 
-    file_name = episode_date + ' ' + title + '.mp3'
-    print_raw('file_name: ' + file_name)
+# Main 'loop'
+driver.get('https://sverigesradio.se/tankarfordagen')
+try:
+    page = 0
+    while True:
+        print('Page: ' + str(page))
+        episodes = driver.find_elements_by_class_name('episode-list-item')
+        print('Episode count: ' + str(len(episodes)))
 
-    urllib.request.urlretrieve(download_link, file_name)
+        for episode in episodes:
+            download_episode(episode)
+        
+        show_more(driver, page)
+        page += 1
+except NoSuchElementException:
+    print('Downloaded all episodes')
