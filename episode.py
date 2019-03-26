@@ -66,6 +66,9 @@ def get_episodes(driver):
 class Episode:
     def __init__(self, episode_element):
         self.title = episode_element.find_element_by_class_name('heading').text
+        # Remove question mark
+        self.title = self.title.replace('?', '')
+
         self.date = get_date(episode_element)
         self.dir = ''
         self.file = self.date + ' ' + self.title
@@ -78,7 +81,10 @@ class Episode:
             self.ext = 'm4a'
 
     def filename(self):
-        return os.path.join(self.dir,self.file + '.' + self.ext)
+        if len(self.dir) > 0:
+            return os.path.join(self.dir,self.file + '.' + self.ext)
+        else:
+            return self.file + '.' + self.ext
 
     def download(self):
         # Create dir

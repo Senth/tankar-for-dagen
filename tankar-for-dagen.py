@@ -14,7 +14,7 @@ chrome_options.add_argument('--lang=sv')
   
 prefs = {"profile.default_content_setting_values.notifications": 2} 
 chrome_options.add_experimental_option("prefs", prefs) 
-driver = webdriver.Chrome("/usr/lib/chromium-browser/chromedriver", chrome_options=chrome_options) 
+driver = webdriver.Chrome("/usr/bin/chromedriver", chrome_options=chrome_options) 
 
 show_more_url='https://sverigesradio.se/tankarfordagen/sida/episode/showmoreepisodelistitems?unitid=1165&page={PAGE}&ajax=true&gaaction=click&gakey=avsnittslista_visa_fler_senaste&gatrackcontext=avsnittslista&date=' + episode_util.today() + '%2000:00:00'
 
@@ -40,6 +40,7 @@ try:
         print('Episode count: ' + str(len(episodes)))
 
         for episode in episodes:
+            episode.dir = '../Tankar för dagen'
             episode.download()
         
         show_more(driver, page)
